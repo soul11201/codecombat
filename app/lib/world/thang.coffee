@@ -1,30 +1,41 @@
 ThangState = require './thang_state'
 {thangNames} = require './names'
 {ArgumentError} = require './errors'
+Rand = require './rand'
 
 module.exports = class Thang
-  @className: "Thang"
-  @nextID: (spriteName) ->
-    Thang.lastIDNums ?= {}
-    names = thangNames[spriteName]
-    if names
-      lastIDNum = Thang.lastIDNums[spriteName]
-      idNum = (if lastIDNum? then lastIDNum + 1 else 0)
-      Thang.lastIDNums[spriteName] = idNum
-      id = names[idNum % names.length]
-      if idNum >= names.length
-        id += Math.floor(idNum / names.length) + 1
-    else
-      Thang.lastIDNums[spriteName] = if Thang.lastIDNums[spriteName]? then Thang.lastIDNums[spriteName] + 1 else 0
-      id = spriteName + (Thang.lastIDNums[spriteName] or '')
-    id
-  @resetThangIDs: -> Thang.lastIDNums = {}
+  @className: 'Thang'
+  @remainingThangNames: {}
+
+  @nextID: (spriteName, world) ->
+    originals = thangNames[spriteName] or [spriteName]
+    remaining = Thang.remainingThangNames[spriteName]
+    remaining = Thang.remainingThangNames[spriteName] = originals.slice() unless remaining?.length
+
+    baseName = remaining.splice(world.rand.rand(remaining.length), 1)[0]
+    i = 0
+    while true
+      name = if i then "#{baseName} #{i}" else baseName
+      extantThang = world.thangMap[name]
+      break unless extantThang
+      i++
+    name
+
+  @resetThangIDs: -> Thang.remainingThangNames = {}
+  isThang: true
+  apiProperties: ['id', 'spriteName', 'health', 'pos', 'team']
 
   constructor: (@world, @spriteName, @id) ->
     @spriteName ?= @constructor.className
-    @id ?= @constructor.nextID @spriteName
+    @id ?= @constructor.nextID @spriteName, @world
     @addTrackedProperties ['exists', 'boolean']  # TODO: move into Systems/Components, too?
     #console.log "Generated #{@toString()}."
+
+  destroy: ->
+    # Just trying to destroy __aetherAPIClone, but might as well nuke everything just in case
+    @[key] = undefined for key of @
+    @destroyed = true
+    @destroy = ->
 
   updateRegistration: ->
     system.register @ for system in @world.systems
@@ -32,6 +43,15 @@ module.exports = class Thang
   publishNote: (channel, event) ->
     event.thang = @
     @world.publishNote channel, event
+
+  getGoalState: (goalID) ->
+    @world.getGoalState goalID
+
+  setGoalState: (goalID, status) ->
+    @world.setGoalState goalID, status
+
+  getThangByID: (id) ->
+    @world.getThangByID id
 
   addComponents: (components...) ->
     # We don't need to keep the components around after attaching them, but we will keep their initial config for recreating Thangs
@@ -42,7 +62,7 @@ module.exports = class Thang
         componentClass = @world.classMap[componentClass]
       else
         @world?.classMap[componentClass.className] ?= componentClass
-      c = new componentClass componentConfig
+      c = new componentClass componentConfig ? {}
       c.attach @
 
   # [prop, type]s of properties which have values tracked across WorldFrames. Also call keepTrackedProperty some non-expensive time when you change it or it will be skipped.
@@ -111,7 +131,7 @@ module.exports = class Thang
       source.original = chain.original.toString()
       source.user = chain.user?.toString()
     else
-      source.original = @[methodName]?.toString() ? ""
+      source.original = @[methodName]?.toString() ? ''
     source.original = Aether.getFunctionBody source.original
     source
 
@@ -138,3 +158,13 @@ module.exports = class Thang
       # TODO: take some (but not all) of deserialize logic from ThangState to handle other types
       t[prop] = val
     t
+
+  serializeForAether: ->
+    {CN: @constructor.className, id: @id}
+
+  getSpriteOptions: ->
+    colorConfigs = @world?.getTeamColors() or {}
+    options = {}
+    if @team and colorConfigs[@team]
+      options.colorConfig = {team: colorConfigs[@team]}
+    options

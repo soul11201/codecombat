@@ -13,9 +13,11 @@ module.exports = function(config) {
     files : [
       'public/javascripts/vendor.js',
       'public/lib/ace/ace.js',
+      'public/javascripts/aether.js',
       'public/javascripts/app.js',
-
-      'test/app/**/*.coffee'
+      'public/javascripts/mock-ajax.js',
+      'public/javascripts/test-app.js',
+      'public/javascripts/run-tests.js'
     ],
 
     preprocessors : {
@@ -41,7 +43,7 @@ module.exports = function(config) {
 
     // level of logging
     // possible values: LOG_DISABLE || LOG_ERROR || LOG_WARN || LOG_INFO || LOG_DEBUG
-    logLevel : config.LOG_INFO,
+    logLevel : config.LOG_ERROR, // doesn't seem to work?
 
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch : true,
@@ -75,7 +77,8 @@ module.exports = function(config) {
       'karma-chrome-launcher',
       'karma-phantomjs-launcher',
       'karma-coffee-preprocessor',
-      'karma-coverage'
+      'karma-coverage',
+      'karma-firefox-launcher'
     ]
   });
 

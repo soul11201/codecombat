@@ -1,8 +1,13 @@
-CocoModel = require('./CocoModel')
+CocoModel = require './CocoModel'
 
 module.exports = class LevelComponent extends CocoModel
-  @className: "LevelComponent"
-  urlRoot: "/db/level.component"
+  @className: 'LevelComponent'
+  @schema: require 'schemas/models/level_component'
+  
+  @EquipsID: '53e217d253457600003e3ebb'
+  @ItemID: '53e12043b82921000051cdf9'
+  @AttacksID: '524b7ba57fc0f6d519000016'
+  urlRoot: '/db/level.component'
 
   set: (key, val, options) ->
     if _.isObject key
@@ -13,17 +18,17 @@ module.exports = class LevelComponent extends CocoModel
       attrs.js = @compile attrs.code
     super attrs, options
 
-  onLoaded: =>
+  onLoaded: ->
     super()
     @set 'js', @compile(@get 'code') unless @get 'js'
 
   compile: (code) ->
-    if @get('language') and @get('language') isnt 'coffeescript'
-      return console.error("Can't compile", @get('language'), "-- only CoffeeScript.", @)
+    if @get('codeLanguage') and @get('codeLanguage') isnt 'coffeescript'
+      return console.error('Can\'t compile', @get('codeLanguage'), '-- only CoffeeScript.', @)
     try
       js = CoffeeScript.compile(code, bare: true)
     catch e
-      #console.log "couldn't compile", code, "for", @get('name'), "because", e
+      #console.log 'couldn\'t compile', code, 'for', @get('name'), 'because', e
       js = @get 'js'
     js
 

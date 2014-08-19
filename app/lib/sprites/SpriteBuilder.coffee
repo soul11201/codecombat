@@ -3,7 +3,7 @@
 module.exports = class SpriteBuilder
   constructor: (@thangType, @options) ->
     @options ?= {}
-    raw = _.cloneDeep(@thangType.get('raw'))
+    raw = @thangType.get('raw')
     @shapeStore = raw.shapes
     @containerStore = raw.containers
     @animationStore = raw.animations
@@ -13,7 +13,9 @@ module.exports = class SpriteBuilder
 
   buildMovieClip: (animationName, movieClipArgs...) ->
     animData = @animationStore[animationName]
-    console.log "couldn't find animData from", @animationStore, "for", animationName unless animData
+    unless animData
+      console.error 'couldn\'t find animData from', @animationStore, 'for', animationName
+      return null
     locals = {}
     _.extend locals, @buildMovieClipShapes(animData.shapes)
     _.extend locals, @buildMovieClipContainers(animData.containers)
@@ -109,7 +111,7 @@ module.exports = class SpriteBuilder
     shape
 
   buildContainerFromStore: (containerKey) ->
-    console.error "Yo we don't have no", containerKey unless containerKey
+    console.error 'Yo we don\'t have no', containerKey unless containerKey
     contData = @containerStore[containerKey]
     cont = new createjs.Container()
     cont.initialize()
@@ -122,7 +124,7 @@ module.exports = class SpriteBuilder
       cont.addChild(child)
     cont.bounds = new createjs.Rectangle(contData.b...)
     cont
-    
+
   buildColorMaps: ->
     @colorMap = {}
     colorGroups = @thangType.get('colorGroups')
@@ -134,15 +136,15 @@ module.exports = class SpriteBuilder
     for group, config of colorConfig
       continue unless colorGroups[group] # color group not found...
       @buildColorMapForGroup(colorGroups[group], config)
-      
+
   buildColorMapForGroup: (shapes, config) ->
     return unless shapes.length
     colors = @initColorMap(shapes)
     @adjustHuesForColorMap(colors, config.hue)
-    @adjustColorMap(colors, 1, config.lightness)
-    @adjustColorMap(colors, 2, config.saturation)
+    @adjustValueForColorMap(colors, 1, config.saturation)
+    @adjustValueForColorMap(colors, 2, config.lightness)
     @applyColorMap(shapes, colors)
-    
+
   initColorMap: (shapes) ->
     colors = {}
     for shapeKey in shapes
@@ -154,32 +156,30 @@ module.exports = class SpriteBuilder
 
   adjustHuesForColorMap: (colors, targetHue) ->
     hues = (hsl[0] for hex, hsl of colors)
-    
+
     # 'rotate' the hue spectrum so averaging works
     if Math.max(hues) - Math.min(hues) > 0.5
       hues = (if h < 0.5 then h + 1.0 else h for h in hues)
     averageHue = sum(hues) / hues.length
     averageHue %= 1
     # end result should be something like a hue array of [0.9, 0.3] gets an average of 0.1
-    
+
     targetHue ?= 0
     diff = targetHue - averageHue
     hsl[0] = (hsl[0] + diff + 1) % 1 for hex, hsl of colors
 
-  adjustColorMap: (colorMap, index, adjustment) ->
-    return unless adjustment
-    for hex, hsl of colorMap
-      value = hsl[index]
-      if adjustment > 0
-        hsl[index] = value + (1 - value) * adjustment
-      else
-        hsl[index] = value + value * adjustment
+  adjustValueForColorMap: (colors, index, targetValue) ->
+    values = (hsl[index] for hex, hsl of colors)
+    averageValue = sum(values) / values.length
+    targetValue ?= 0.5
+    diff = targetValue - averageValue
+    for hex, hsl of colors
+      hsl[index] = Math.max(0, Math.min(1, hsl[index] + diff))
 
   applyColorMap: (shapes, colors) ->
     for shapeKey in shapes
       shape = @shapeStore[shapeKey]
       continue if (not shape.fc?) or not(colors[shape.fc])
       @colorMap[shapeKey] = hslToHex(colors[shape.fc])
-
 
 sum = (nums) -> _.reduce(nums, (s, num) -> s + num)

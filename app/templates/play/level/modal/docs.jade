@@ -1,9 +1,9 @@
-// TODO: refactor to be like other modals
-.modal-header
-  button(type='button', data-dismiss="modal", aria-hidden="true").close &times;
+extends /templates/modal/modal_base
+
+block modal-header-content
   h3(data-i18n="play_level.guide_title") Guide
 
-.modal-body
+block modal-body-content
   ul.nav.nav-tabs
     for doc in docs
       li
@@ -12,5 +12,5 @@
     for doc in docs
       div.tab-pane(id="docs_tab_#{doc.slug}")!= doc.html
 
-.modal-footer
+block modal-footer-content
   a(href='#', data-dismiss="modal", aria-hidden="true", data-i18n="modal.close").btn.btn-primary Close

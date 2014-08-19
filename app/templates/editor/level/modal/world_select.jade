@@ -1,11 +1,14 @@
-.modal-header
-  button(type='button', data-dismiss="modal", aria-hidden="true").close &times;
+extends /templates/modal/modal_base
+
+
+block modal-header-content
   h3 
     if selectingPoint
       | Select Point
     else
       | Select Region
-.modal-body
+
+block modal-body-content
   div.instructions
     div.alert.alert-info 
       strong Click
@@ -24,7 +27,8 @@
     div.alert.alert-info 
       strong Enter
       |  to confirm
-  canvas(width=924, height=590)
-.modal-footer
-  a.btn.btn-primary#done-button Done
+  canvas(width=924, height=589)
 
+block modal-footer-content
+  a.btn.btn-primary#done-button Done
+  
